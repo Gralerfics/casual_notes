@@ -1,7 +1,0 @@
-set(teach_repeat_SETUP_PY_SETUP_MODULE "distutils.core")
-set(teach_repeat_SETUP_PY_VERSION "0.1.0")
-set(teach_repeat_SETUP_PY_SCRIPTS "")
-set(teach_repeat_SETUP_PY_PACKAGES "teach_repeat")
-set(teach_repeat_SETUP_PY_PACKAGE_DIRS "src/teach_repeat")
-set(teach_repeat_SETUP_PY_MODULES "")
-set(teach_repeat_SETUP_PY_MODULE_DIRS "")

@@ -1,2 +1,0 @@
-sensor_msgs/CompressedImage left
-sensor_msgs/CompressedImage right

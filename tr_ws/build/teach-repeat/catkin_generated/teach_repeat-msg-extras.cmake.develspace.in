@@ -1,2 +1,0 @@
-set(teach_repeat_MESSAGE_FILES "/home/gralerfics/MyFiles/Workspace/tr_ws/src/teach-repeat/msg/CompressedImageSynchronised.msg;/home/gralerfics/MyFiles/Workspace/tr_ws/src/teach-repeat/msg/Goal.msg")
-set(teach_repeat_SERVICE_FILES "/home/gralerfics/MyFiles/Workspace/tr_ws/src/teach-repeat/srv/ImageMatch.srv;/home/gralerfics/MyFiles/Workspace/tr_ws/src/teach-repeat/srv/SaveImageAndPose.srv;/home/gralerfics/MyFiles/Workspace/tr_ws/src/teach-repeat/srv/SetGoal.srv;/home/gralerfics/MyFiles/Workspace/tr_ws/src/teach-repeat/srv/SetJointState.srv")
