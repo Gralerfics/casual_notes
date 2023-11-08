@@ -17,6 +17,8 @@
 
 比如仿真 Pioneer3At 建图:
 roslaunch webots_ros pioneer3at.launch
+	Update:
+		如果卡在资源下载调一下梯子（Global）试试, 网上也能搜到自己下载资源到本地的方法。
 rosrun gmapping slam_gmapping scan:=/pioneer3at/Sick_LMS_291/laser_scan _xmax:=30 _xmin:=-30 _ymax:=30 _ymin:=-30 _delta:=0.2
 	没有 gmapping 则从 apt 安装: sudo apt install ros-noetic-gmapping
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/pioneer3at/pioneer_diff_drive_controller/cmd_vel
