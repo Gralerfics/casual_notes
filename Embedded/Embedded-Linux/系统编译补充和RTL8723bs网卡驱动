@@ -1,0 +1,120 @@
+[*] 补充
+
+工具链二进制文件下载点: https://releases.linaro.org/components/toolchain/binaries/
+
+VSCode clangd 那里好像不加 item 也没影响. 会弹窗提示禁用 IntelliSense, 禁用一下, 省得冲突.
+
+make menuconfig 报错 <command-line>: fatal error: curses.h, 要 apt 安装 libncurses5-dev.
+
+U-boot 编译时出现 *** Your dtc is too old, please upgrade to dtc 1.4 or newer, 要 apt 安装 device-tree-compiler.
+
+U-boot 编译时出现 SyntaxError: Missing parentheses in call to 'print'. Did you mean print, 要切 Python2.
+
+内核加载配置时, 报错 /bin/sh: 1: flex: not found, 要 apt 安装 flex. 还有 bison.
+
+模块编译时的后一句:
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=out -j4 modules_install
+之前以为是放进主机的文件系统, 但实际好像是输出到源码目录下, 必须要打.
+并且需要根据该句的回显输出确定 .ko 文件的位置.
+
+buildroot 配置里的 kernel headers series, 要到工具链里头看版本号, 具体在:
+../arm-linux-gnueabihf/libc/usr/include/linux/version.h
+	#define LINUX_VERSION_CODE 264707
+	#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+
+========================================================================================================================================
+[*] rtl8723bs 网卡适配
+
+似乎是要把现成的固件写进芯片里, 固件从这里拉取:
+git clone https://github.com/ferbar/rtl8723bs.git
+把里面的 rtl8723bs_nic.bin 拿出来, 之后放进*板子*文件系统的 /lib/firmware/rtlwifi (要新建一下).
+
+内核源码目录 drivers/staging/rtl8723bs/ 下的 r8723bs.ko 拿走, 使用 insmod 加载.
+
+[测试]
+	参考 https://zhuanlan.zhihu.com/p/626128427
+
+	insmod 好之后打开驱动:
+	ifconfig wlan0 up
+
+	确认一下出现 wlan0 (up 之前不会出现在 ifconfig, 而是需要 ifconfig -a 才能看见):
+	ifconfig
+
+	vi /etc/network/interfaces
+	添加:
+	auto wlan0
+	iface wlan0 inet dhcp
+
+	创建一个 socket 通讯用的目录: (?)
+	mkdir -p /var/run/wpa_supplicant
+
+	vi /etc/wpa_supplicant.conf
+	修改为:
+	ctrl_interface=/var/run/wpa_supplicant
+	ctrl_interface_group=0
+	ap_scan=1
+	network={
+		ssid="Gralerfics" 
+		scan_ssid=1
+		key_mgmt=WPA-EAP WPA-PSK IEEE8021X NONE
+		pairwise=TKIP CCMP
+		group=CCMP TKIP WEP104 WEP40
+		psk="wswzy1357"
+		priority=5
+	}
+
+	然后连接:
+	wpa_supplicant -B -c /etc/wpa_supplicant.conf -i wlan0
+	这里除了 Successfully initialized wpa_supplicant 还报了个 rfkill: Cannot open RFKILL control device, 但好像没影响.
+
+	获取 IP 使用:
+	udhcpc -i wlan0
+
+	测试:
+	ping www.baidu.com
+
+[开机启动]
+	
+
+[问题]
+	[*] insmod 时出现 invalid format 时应该是模块和内核编译不匹配, 可能什么时候忘记了, 重新编译一起放进去即可.
+
+	[*] insmod 时出现 unknown symbol 并且有 cfg80211 字样, 是还没加载 cfg80211 模块.
+	在内核源码目录搜索 cfg80211.c 进入目录 (在 drivers/staging/wlan-ng/), 打开 Kconfig 确认选项名称:
+		tristate "Prism2.5/3 USB driver"
+	然后在 menuconfig 中寻找 Device Drivers - Staging drivers - Prism2.5/3 USB driver 给它勾上.
+	在 module_install 时查看输出有一句 INSTALL net/wireless/cfg80211.ko, 故在内核源码目录下 net/... 对应位置就找到 cfg80211.ko.
+	一起放进文件系统, 先 insmod 这个, 再加载网卡驱动即可. lsmod 可以查看已经加载的模块.
+	
+	[!!!!! Update] 关于上面的 cfg80211,
+	menuconfig 中有一个 Networking Support - Wireless - cfg80211 wireless extensions compatibility,
+	感觉上就是单独打开 cfg80211 的支持, 打开之后确实就不用再单独开 Prism2.5/3 USB driver 再 insmod cfg80211 了.
+	前提是要注意不止选中 compatibility 那项, 它所属的大类 cfg80211 - wireless configuration API 也要选中,
+	默认好像是 [M] 编译为模块, 给它空格一下改成 [*], 不然还是要加载模块.
+	这么看的话前面的 Prism2.5/3 USB driver 感觉只是用到了这个 cfg80211, 这里才是单独的打开.
+	
+	[*] insmod 成功后回显信息中没有出现 RTL8723BS: rtw_ndev_init(wlan0) 等字样, ifconfig -a 也不显示 wlan0.
+	应该是驱动加载但未能查找到相应的硬件配置信息, 首先可能硬件连接有问题, 没有插好卡 (这是 sdio 网卡, 连的 MMC 接口).
+	硬件没问题多半是设备树出了问题, Licheepi 的情况下要使用 Dock 的 DTS, 因为里面禁用 LED 并配置了 MMC1 节点 (PG0-5).
+	
+	[*] ifconfig wlan0 up 时出现 SIOCSIFFLAGS: Operation not permitted.
+	Update: 文件系统构建用 buildroot 的话没出这个问题, 问题在文件系统上.
+	但 buildroot 没有包管理器还容易损坏.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

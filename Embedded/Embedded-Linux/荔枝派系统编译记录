@@ -20,8 +20,7 @@ sudo fdisk /dev/sdX
 
 sudo mkfs.vfat /dev/sdX1
 sudo mkfs.ext4 /dev/sdX2
-	sudo mkfs.vfat /dev/sdc1
-	sudo mkfs.ext4 /dev/sdc2
+
 df -T -h
 /* part 1 -> fat, part 2 -> ext4, check */
 
@@ -66,7 +65,8 @@ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4
 /* kernel, zImage in arch/arm/boot/ -> part 1 */
 
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=out -j4 modules
-(make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=out -j4 modules_install 这个似乎是把模块放进开发机的文件系统, 应该没用.)
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=out -j4 modules_install
+后一句之前以为是放进主机的文件系统, 但实际好像是输出到源码目录下？
 /* modules, in out/, modules -> [filesystem]/lib/s? */
 
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- dtbs
@@ -104,12 +104,19 @@ make menuconfig
 		配置为外部工具链. 这台上用的 arm-none-eabi-, 不过似乎大多都用的是 arm-linux-gnueabihf-.
 		路径为 /home/gralerfics/MyFiles/Environments/Embedded/gcc-arm-none-eabi-10.3-2021.10/arm-none-eabi/
 		但是好像这个版本的 buildroot 选项里还支持不到 gcc10 Emmmm.
-		所以要么下一个古早版本的 gnueabihi, 参考 https://blog.csdn.net/p1279030826/article/details/105021536, 要么下一个 2021 后版本的 buildroot
+		所以要么下一个古早版本的 gnueabihf, 参考 https://blog.csdn.net/p1279030826/article/details/105021536, 要么下一个 2021 后版本的 buildroot
 		* Update:
 			选项里还有一个 kernel headers series, 似乎是要到工具链里头看版本号.
+
+			在 ../arm-linux-gnueabihf/libc/usr/include/linux/version.h 
+			#define LINUX_VERSION_CODE 264707
+			#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+
 			arm-none-eabi 似乎是面向裸机嵌入式的, 不知道能不能混用, 还是搞一个 arm-linux-gnueabihf 吧.
-			放在了 /home/gralerfics/MyFiles/Environments/Embedded/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf/
+			放在了 /home/gralerfics/MyFiles/Environments/Embedded/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf
 			既然如此, 前面 uboot 和 linux 的提示换成 CROSS_COMPILE=arm-linux-gnueabihf- 了, 不知道是不是必要.
+		* Up-update:
+			还是得用 arm-linux-gnueabi(hf), 支持操作系统, 虽然前面的 uboot 和内核编译没问题, 但文件系统应该有要求.
 	System configuration
 		这里头可以改 root 密码, hostname 和其他一些东西.
 	Kernel
@@ -129,7 +136,112 @@ sudo tar -xvf rootfs.tar -C /media/xxxxx (用 pwd 查看第二个分区的路径
 /* -> part 2 */
 
 ========================================================================================================================================
-[*] Debian fs ?
+[*] Debian fs (后续发现打开网卡驱动时有问题, 不知道如何解决, buildroot 没问题)
+
+参考: https://www.cnblogs.com/twzy/p/15160824.html
+
+没有的话安一些工具
+sudo apt install qemu-user-static -y
+sudo apt install debootstrap -y
+
+sudo debootstrap --foreign --verbose --arch=armhf buster rootfs http://mirrors.huaweicloud.com/debian/
+生成一个 rootfs 目录, 里边为构建的文件系统. V3s 有硬件浮点所以可以 armhf, 没有的话就 armel. buster 是版本 (Debian 10). 源用合适的.
+
+一系列挂载: (好像并不需要)
+cd rootfs
+sudo mount --bind /dev dev/
+sudo mount --bind /sys sys/
+sudo mount --bind /proc proc/
+sudo mount --bind /dev/pts dev/pts/
+cd ..
+
+然后chroot 进去. 完成后提示符会变成以构建的 rootfs 为根的样子.
+sudo cp /usr/bin/qemu-arm-static rootfs/usr/bin/
+sudo chmod +x rootfs/usr/bin/qemu-arm-static
+sudo LC_ALL=C LANGUAGE=C LANG=C chroot rootfs /debootstrap/debootstrap --second-stage --verbose
+sudo LC_ALL=C LANGUAGE=C LANG=C chroot rootfs
+
+配下密码
+passwd root
+
+(添加用户)
+groupadd <用户组>
+useradd -m -g <用户组> -s /bin/bash <用户名>
+passwd <用户名>
+
+改主机名, 改个 localhost
+vi /etc/hostname
+
+网络相关
+apt install wpasupplicant #安装WIFI配置相关的组件
+apt install net-tools     #安装网络基础组件、如使用ifconfig等
+apt install udhcpc        #当wifi连接成功后，需要用这个组件去获取IP地址
+和其他一些. 合并: apt install wpasupplicant net-tools udhcpc sudo wireless-tools vim openssh-server htop pciutils usbutils
+(有个 acpi 说没有)
+
+SSH
+vi etc/ssh/sshd_config
+添加 PermitRootLogin yes
+
+最后清除安装包, 退出 chroot.s
+apt-cache clean (好像报错)
+exit
+sudo rm rootfs/usr/bin/qemu-arm-static
+
+卸载: (如前挂载, 好像并不需要)
+cd rootfs
+sudo umount   dev/pts/
+sudo umount   dev/
+sudo umount   sys/
+sudo umount   proc/
+sudo umount   dev/pts/
+
+最后打包, 或者直接搬走目录
+cd rootfs
+sudo tar cvf ../rootfs.tar .
+cd ..
+
+然后同前解压:
+sudo tar -xvf rootfs.tar -C /media/xxxxx (用 pwd 查看第二个分区的路径)
+/* -> part 2 */
+
+========================================================================================================================================
+[*] emdebian fs (?)
+
+sudo apt install debian-archive-keyring
+似乎是密钥之类的东西, 前面使用 debootstrap 的方式似乎没需要,
+但如果 sudo debootstrap --foreign --verbose --arch=armhf buster rootfs http://ftp2.cn.debian.org/debian 就需要,
+区别就一个源, 可能是官方源需要许可之类...?
+同类的还有 sudo apt install emdebian-archive-keyring
+
+
+
+========================================================================================================================================
+[*] Coding in VSCode
+
+在 Linux 目录下执行生成 compile_commands.json (还可以使用 bear 工具, 效果类似)
+python ./scripts/gen_compile_commands.py
+
+VSCode 安装插件 clangd
+配置, 参考 https://zhuanlan.zhihu.com/p/558286384?utm_id=0
+即加入以下 item: (这里好像不加也没事)
+	--compile-commands-dir=${workspaceFolder}
+	--background-index
+	--completion-style=detailed
+	--header-insertion=never
+	-log=info
+
+打开目录, 还是有报错, 部分选项不认, 在源码目录下:
+touch .clangd
+/* Contents:
+	CompileFlags:
+		Remove: [-fno-allow-store-data-races, -mfunction-return=thunk-extern, -mindirect-branch-cs-prefix, -mindirect-branch-register, -mindirect-branch=thunk-extern, -mskip-rax-setup, -mpreferred-stack-boundary=3, -mno-fp-ret-in-387, -mapcs,-mno-sched-prolog, -fno-ipa-sra, -mno-thumb-interwork, -fno-var-tracking-assignments, -fconserve-stack]
+		Add: --target=armv7-a
+*/
+即手动移除部分 clang 不支持的参数, 参考 https://stackoverflow.com/questions/70819007/can-not-use-clangd-to-read-linux-kernel-code 和 https://dhexx.cn/news/show-4624266.html?action=onClick.
+最后一行的 Add 不知道具体作用.
+
+弹窗提示禁用 IntelliSense, 禁用一下, 省得冲突.
 
 ========================================================================================================================================
 [*] Problems
@@ -137,8 +249,6 @@ sudo tar -xvf rootfs.tar -C /media/xxxxx (用 pwd 查看第二个分区的路径
 		某次直接拔供电再开开始就会死掉, 然后以为文件系统损坏, 重新解压 rootfs.tar, 正常引导到最后报这个错然后进 panic.
 		原因不知道, 重新分区格式化 tf 卡之后正常. 正常 poweroff 再开也正常.
 	[*]
-
-
 
 
 
