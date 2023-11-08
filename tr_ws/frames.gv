@@ -1,0 +1,11 @@
+digraph G {
+"base_link" -> "accelerometer"[label="Broadcaster: /turtlebot3_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1697224512.929 sec old)\nBuffer length: 0.000 sec\n"];
+"odom" -> "base_link"[label="Broadcaster: /turtlebot3\nAverage rate: 16.877 Hz\nMost recent transform: 1697224512.896 ( 0.033 sec old)\nBuffer length: 4.918 sec\n"];
+"base_link" -> "camera"[label="Broadcaster: /turtlebot3_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1697224512.929 sec old)\nBuffer length: 0.000 sec\n"];
+"base_link" -> "compass"[label="Broadcaster: /turtlebot3_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1697224512.929 sec old)\nBuffer length: 0.000 sec\n"];
+"base_link" -> "gyro"[label="Broadcaster: /turtlebot3_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1697224512.929 sec old)\nBuffer length: 0.000 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1697224512.929"[ shape=plaintext ] ;
+ }->"odom";
+}

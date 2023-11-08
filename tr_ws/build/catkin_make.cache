@@ -1,0 +1,2 @@
+teach-repeat
+-DCATKIN_DEVEL_PREFIX=/home/gralerfics/MyFiles/Workspace/tr_ws/devel -DCMAKE_INSTALL_PREFIX=/home/gralerfics/MyFiles/Workspace/tr_ws/install -G Unix Makefiles

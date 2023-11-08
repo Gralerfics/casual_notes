@@ -1,0 +1,100 @@
+<launch>
+    <!-- Simulation -->
+    <!--     DiffDriveController -->
+    <group ns="turtlebot3">
+        <rosparam>
+            turtlebot_diff_drive_controller:
+                type: "diff_drive_controller/DiffDriveController"
+                left_wheel: ['left wheel motor']
+                right_wheel: ['right wheel motor']
+                pose_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+                twist_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+        </rosparam>
+		<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="turtlebot_diff_drive_controller" />
+	</group>
+    
+    <!--     Start Webots -->
+    <arg name="no_gui" default="false" doc="Start Webots with minimal GUI" />
+    <include file="$(find webots_ros)/launch/webots.launch">
+        <arg name="mode" value="realtime" />
+        <arg name="no_gui" value="$(arg no_gui)" />
+        <arg name="world" value="$(find teach_repeat)/worlds/test_wbt_world.wbt" />
+    </include>
+
+    <!--     Robot State Publisher -->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="turtlebot3_state_publisher" respawn="true" respawn_delay="5">
+        <remap from="robot_description" to="/turtlebot3/robot_description" />
+    </node>
+	
+	<!-- Global params -->
+	<arg name="repeat_num" default="1" />
+	<arg name="use_corrupted_odom" default="true" />
+	<arg name="odom_corruption_factor" default="0.0" />
+
+	<rosparam param="data_load_dir">~/tmp/teach-repeat-data/2023-10-13_23:53:40</rosparam>
+	<rosparam param="data_save_dir" subst_value="True">~/tmp/teach-repeat-data/2023-10-13_23:53:40-repeat-$(arg odom_corruption_factor)-$(arg repeat_num)</rosparam>
+
+	<rosparam param="wait_for_ready">false</rosparam>
+	<rosparam param="image_resize_width">100</rosparam>
+	<rosparam param="image_resize_height">50</rosparam>
+	<rosparam param="image_subsampling">1</rosparam>
+	<rosparam param="image_field_of_view_width_deg">75</rosparam>
+	<rosparam param="patch_size">(9,9)</rosparam>
+	<rosparam param="image_recognition_threshold">0.1</rosparam>
+	<rosparam param="goal_pose_separation">0.2</rosparam>
+	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
+	<rosparam param="turning_target_range_distance_ratio">0.2</rosparam>
+	<rosparam param="goal_theta_tolerance">15</rosparam>
+	<rosparam param="save_full_res_images">false</rosparam>
+	<rosparam param="save_full_res_images_at_goal">true</rosparam>
+	<rosparam param="save_gt_data">true</rosparam>
+	<rosparam param="publish_gt_goals">false</rosparam>
+
+	<!-- Odom corrupter -->
+	<node pkg="teach_repeat" type="odom_corrupter.py" name="odom_corrupter" output="screen" if="$(arg use_corrupted_odom)">
+		<remap from="odom" to="/turtlebot3/turtlebot_diff_drive_controller/odom" />
+		<remap from="cmd_vel" to="/turtlebot3/turtlebot_diff_drive_controller/cmd_vel" />
+		<rosparam param="translation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam>
+		<!--rosparam param="rotation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam-->
+		<rosparam param="rotation_error_factor">1.0</rosparam>
+	</node>
+
+	<!-- Load image files for matching -->
+	<node pkg="teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
+		<rosparam param="use_old_dataset_format">false</rosparam>
+		<rosparam param="use_depth">false</rosparam>
+		<rosparam param="use_middle_weighting">false</rosparam>
+	</node>
+
+	<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
+	<node pkg="teach_repeat" type="localiser.py" name="localiser" output="screen" >
+		<remap from="odom" to="/turtlebot3/turtlebot_diff_drive_controller/odom" unless="$(arg use_corrupted_odom)" />
+		<remap from="odom" to="odom_corrupted" if="$(arg use_corrupted_odom)" />
+		<remap from="image" to="/turtlebot3/camera/image" />
+		<rosparam param="stop_at_end">true</rosparam>
+		<rosparam param="discrete-correction">false</rosparam>
+		<rosparam param="search-range">3</rosparam>
+		<rosparam param="global_localisation_init">true</rosparam>
+		<rosparam param="min_init_correlation">0.5</rosparam>
+		<rosparam param="rotation_correction_gain">0.02</rosparam>
+		<rosparam param="path_correction_gain">0.01</rosparam>
+	</node>
+	<!-- Republish the goal as a PoseStamped if we need (send to move_base) -->
+	<node pkg="topic_tools" type="transform" name="goal_repub" args="/goal goalPose geometry_msgs/PoseStamped m.pose"/>
+
+	<!-- Drive to goal pose -->
+	<node pkg="teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
+		<!--remap from="odom" to="odometry/filtered" /-->
+		<remap from="odom" to="/turtlebot3/turtlebot_diff_drive_controller/odom" unless="$(arg use_corrupted_odom)" />
+		<remap from="odom" to="odom_corrupted" if="$(arg use_corrupted_odom)" />
+		<remap from="cmd_vel" to="/turtlebot3/turtlebot_diff_drive_controller/cmd_vel" />
+		<rosparam param="min_omega">0.15</rosparam>
+		<rosparam param="max_omega">0.93</rosparam>
+		<rosparam param="max_v">0.35</rosparam>
+	</node>
+
+	<!-- Show image matching -->
+	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
+		<remap from="image" to="match_image_debug" />
+	</node>
+</launch>
