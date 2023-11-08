@@ -1,0 +1,49 @@
+cd ~/MyFiles/Workspace/catkin_kinova_ws
+
+
+
+# Setup (已加入 ~/.env_conf, 如没有则需要)
+source devel/setup.bash
+
+
+
+# Gazebo 仿真
+roslaunch kortex_gazebo spawn_kortex_robot.launch arm:="gen3_lite" start_rviz:=False
+
+
+
+# kortex_driver, https://github.com/Kinovarobotics/ros_kortex/blob/noetic-devel/kortex_driver/readme.md
+# 要调用 API 先运行这个; 拔掉重插要重开
+roslaunch kortex_driver kortex_driver.launch arm:="gen3_lite" start_rviz:=False
+
+
+
+# kortex_examples - full_arm_movement_python
+roslaunch kortex_examples full_arm_movement_python.launch robot_name:="my_gen3_lite"
+
+
+
+# kortex API_Python
+https://github.com/Kinovarobotics/kortex/blob/master/api_python/doc/markdown/index.md
+
+
+
+# 运行包下的 Python 脚本
+# https://www.cnblogs.com/lanercifang/p/16814614.html
+# 最开始 CMakeLists.txt 找改：	catkin_install_python(PROGRAMS scripts/[script_name].py
+  				  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+				)
+rosrun [pkg_name] [script_name].py
+
+
+
+# 相机
+# 自带
+realsense-viewer
+
+# ROS 驱动（二者不能同时开）
+roslaunch realsense2_camera rs_aligned_depth.launch
+rqt_image_view
+
+
+

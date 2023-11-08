@@ -1,0 +1,19 @@
+莫名其妙用 bringup 也能一起启动了.
+
+roslaunch turtlebot3_bringup turtlebot3_robot.launch set_lidar_frame_id:=laser
+	这里加个参数 set_lidar_frame_id:=laser
+		似乎又不用加了，看情况吧（见后）
+	rviz 中可以显示
+
+【【【更完善的见 03.5 TF 末尾！！！】】】
+
+一圈 360 个点. 正前方为 0, 逆时针方向增加.
+
+【！】
+追溯源码，turtlebot3_bringup 的 turtlebot3_robot.launch 的参数 set_lidar_frame_id 默认值为 base_scan，
+其内部将其传入 turtlebot3_bringup 的 turtlebot3_lidar.launch，
+其内部再启动 hls_lfcd_lds_driver 的 hlds_laser_publisher 节点，将其放入 /scan 的 header 的 frame_id 里。
+	（https://github.com/ROBOTIS-GIT/hls_lfcd_lds_driver/blob/kinetic-devel/src/hlds_laser_publisher.cpp）
+
+设置 fixed frame 要在最左上角 Global Options - Fixed Frame，别在下面只读的地方改！
+

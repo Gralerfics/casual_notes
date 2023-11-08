@@ -1,0 +1,62 @@
+* ROS2
+安装见官网. Tutorial 链接: http://docs.ros.org/en/humble/Tutorials.html
+示例: ros2 run turtlesim turtlesim_node
+
+
+
+* 构建工具: colcon
+sudo apt install python3-colcon-common-extensions
+在 ws 根目录使用 colcon build 构建,
+可以加 --packages-select <package_name> 来指定构建某个包.
+
+
+
+* 工作目录
+创建 [...]/ws/src, src 下存放源码.
+
+
+
+* 构建
+在 ws 根目录下 colcon build. 会生成 build, install, log.
+	build 为构建过程相关的文件;
+	install 为可被 ROS2 搜索的可执行文件;
+		install 下有 local_setup.sh 和 setup.sh, 需要 source 以使 ROS2 可以索引到该 ws 下的内容.
+		两者区别 tutorial 原文: Sourcing the `local_setup` of the overlay will only add the packages available in the overlay to your environment. `setup` sources the overlay as well as the underlay it was created in, allowing you to utilize both workspaces. So, sourcing your main ROS 2 installation’s `setup` and then the `ros2_ws` overlay’s `local_setup`, like you just did, is the same as just sourcing `ros2_ws`’s `setup`, because that includes the environment of its underlay.
+		看起来是说 install/setup.sh 里头还包含了 ROS2 的 setup, 也许吧. 总之在 ~/.bashrc 包含 source ROS2 配置的情况下应该用哪个都行.
+	log 为日志.
+
+
+
+* C/C++ 包
+使用 ros2 pkg create --build-type ament_cmake --dependencies rclcpp std_msgs <package_name> 创建,
+可以再加一个 --node-name <node_name> 顺便创建一个空的 node, 方便后续修改添加.
+包结构大概是:
+	ws/
+		cpkg/
+			CMakeLists.txt
+			include/cpkg/
+			package.xml
+			src/
+加节点的话修改 CMakeLists.txt, 建议创建时使用 --node-name, 之后添加节点照着已有的复制.
+构建就在 ws 中 colcon build (--packages-select cpkg)
+	这会自动构建好, 并把可执行文件丢到 install.
+然后可以运行节点 ros2 run cpkg node_name
+记得在此之前需要 source install/setup.sh
+
+
+
+* Python 包
+使用 ros2 pkg create --build-type ament_python --dependencies rclpy std_msgs <package_name> 创建,
+可以再加一个 --node-name <node_name> 顺便创建一个空的 node, 方便后续修改添加.
+包结构大概是:
+	ws/
+		ppkg/
+			package.xml
+			resource/ppkg
+			setup.cfg
+			setup.py
+			ppkg/
+加节点需要在 setup.py 的 'console_scripts': [ ... 中添加入口 (记得加逗号).
+
+
+

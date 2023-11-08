@@ -1,0 +1,115 @@
+[安装]
+	http://wiki.ros.org/webots_ros
+
+官网下载 .deb 安装 Webots 本体
+相应 ROS 支持: sudo apt install ros-noetic-webots-ros
+
+有些博文提及将一些 xxx/ros/ 之类的文件拷贝放入新工作空间再编译, 估计是 from source 时才需要.
+这里用 dpkg 安装就不用自己 catkin_make 了大概.
+
+
+
+
+
+[例子]
+	https://github.com/cyberbotics/webots_ros
+	http://wiki.ros.org/webots_ros/Tutorials/Sample%20Simulations
+
+比如仿真 Pioneer3At 建图:
+roslaunch webots_ros pioneer3at.launch
+rosrun gmapping slam_gmapping scan:=/pioneer3at/Sick_LMS_291/laser_scan _xmax:=30 _xmin:=-30 _ymax:=30 _ymin:=-30 _delta:=0.2
+	没有 gmapping 则从 apt 安装: sudo apt install ros-noetic-gmapping
+rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/pioneer3at/pioneer_diff_drive_controller/cmd_vel
+	同样地，没有 teleop_twist_keyboard 则安装: sudo apt install ros-noetic-teleop-twist-keyboard
+	(看起来还有其他一堆用于键盘控制的包)
+rosrun rviz rviz
+	启动 rviz, 自己 Add. 由 /map 可以添加地图, 由 /tf 可以添加 TF 等. 可以保存为 xxx.rviz 以后可以 -d xxx.rviz 读取.
+
+
+
+
+
+[配合 ROS]
+想使用官方的默认 ROS controller 需要 roslaunch webots_ros webots.launch, 直接启动 webots 似乎会找不到 libroscpp.
+	在 robot 上的 controller 选择 ros, 在 controllerArgs 里面要添参数:
+		--name=<robot_name>, 发布的 topic 会以这个为前缀.
+		--auto-publish, 加了这个才会自动发布节点 (!!!)
+			该 robot 下面的一系列东西都会发布, 包括自己添的 camera 之类.
+		--robot-description, 写了才会发布 /xxx/robot_description 参数, 该参数才可以使 robot_state_publisher 工作, 从而使 controller_spawner 正常 load.
+		    以及实际上 robot_state_publisher 订阅的是 /robot_description 参数, 所以要在 <node> 内 remap 一下变成订阅 /xxx/robot_description 参数.
+		    	关于 remap: 两种情况, 一个是把自己发布的话题映射到另一个名字, 一个是把自己订阅的话题映射为其他名字, 这里是后者.
+		    	    [!] 本质上是一种情况, 因为无论订阅还是发布, 如果话题不存在都会创建一个显示在 rostopic list 中, 然后 remap 就是单纯的改名操作.
+		--use-ros-control, 不知道, 总之加上吧. 官网说明: Initialize the controller_manager from the ros_control.
+
+
+
+
+
+[关于启动整个系统的 launch 文件]
+例子:
+<launch>
+    <!-- Simulation, 这一大块都参考 /opt/ros/noetic/share/webots_ros/launch/pioneer3at.launch -->
+    <!--     DiffDriveController -->
+    <group ns="turtlebot3"> <!-- 表示这个 group 中是以 /turtlebot3/ 为前缀的命名空间 -->
+        <rosparam>
+            turtlebot_diff_drive_controller:
+                type: "diff_drive_controller/DiffDriveController"
+                left_wheel: ['left wheel motor']
+                right_wheel: ['right wheel motor']
+                pose_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 1000.0]
+                twist_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 1000.0]
+        </rosparam>
+        <!-- 前面这里设定了参数, 名字应该是和后面 args= 里面一致就行, 不固定; -->
+        <!-- 参数内设置差速控制器类型 type; 然后是, 左右轮的名字 (在 Webots 中看, 右键机器人对象 View PROTO Source 找 RotationalMotor 定义的 name). -->
+            <!-- 猜测这也是后面 spawner 节点需要 robot_state_publisher, 而它又依赖 /robot_description 参数的原因: -->
+            <!-- rosparam get /turtlebot3/robot_description 可以看到输出中包含该机器人对象的描述, 包含轮子名字, 它得知道了才能对上. -->
+        <!-- 然后是协方差对角矩阵, 不了解具体, 照搬 -->
+        
+		<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="turtlebot_diff_drive_controller" />
+		<!-- 这里运行 controller_manager 包 (/opt/ros/noetic/share 中) 下的 spawner 节点, 传入上面的参数名 turtlebot_diff_drive_controller. -->
+	</group>
+    
+    <!--     Start Webots -->
+    <!-- 这里是简单的启动 Webots, 注意要使用 Webots 的默认标准 ROS 控制器需要从 webots_ros 包内启动环境. -->
+    <arg name="no_gui" default="false" doc="Start Webots with minimal GUI" />
+    <include file="$(find webots_ros)/launch/webots.launch">
+        <arg name="mode" value="realtime" />
+        <arg name="no_gui" value="$(arg no_gui)" />
+        <arg name="world" value="$(find teach_repeat)/worlds/test_wbt_world.wbt" />
+        <!-- world 内传入 .wbt 世界信息 -->
+    </include>
+
+    <!--     Robot State Publisher -->
+    <!-- 这里启动 robot_state_publisher 节点, remap 一下后依赖 /turtlebot3/robot_description 参数, 然后前面的 controller_manager 的 spawner 依赖该节点 -->
+    <!-- 一切正常的话差速控制器将会发布 /turtlebot3/turtlebot_diff_drive_controller/ 下的 cmd_vel, odom 等 topic. 在此基础上可以启动 teleop_twist_keyboard, 设 cmd_vel:=/tur.../.../cmd_vel 控制. -->
+    <!-- 顺便, 刚 launch 时因为 Webots 环境还没启动, 该节点会一直爆红找不到 robot_description parameter server, 所以会一直 respawn 直到 Webots 启动完, 下面的 respawn_delay 估计就是重试间隔. -->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="turtlebot3_state_publisher" respawn="true" respawn_delay="5">
+        <remap from="robot_description" to="/turtlebot3/robot_description" />
+    </node>
+
+    <!-- 下面是 teach_repeat 相关的部分 -->
+    <!-- Global params -->
+	<rosparam param="image_resize_width">100</rosparam>
+	<rosparam param="image_resize_height">50</rosparam>
+    <rosparam param="patch_size">(9,9)</rosparam>
+    <rosparam param="save_gt_data">true</rosparam>
+
+    <!-- Collect image data -->
+    <node pkg="teach_repeat" type="data_collect.py" name="data_collect" output="screen">
+        <remap from="odom" to="odometry/filtered" />
+        <remap from="image" to="ros_indigosdk_occam/image0" />
+        <rosparam param="distance_threshold">0.2</rosparam>
+        <rosparam param="angle_threshold_deg">15.0</rosparam>
+    </node>
+
+    <!-- Save Images and pose in a directory -->
+    <node pkg="teach_repeat" type="data_save.py" name="data_save" output="screen">
+        <rosparam param="save_dir">~/tmp/teach-repeat-data/</rosparam>
+        <rosparam param="timestamp_folder">true</rosparam>
+    </node>
+</launch>
+
+
+
+
+

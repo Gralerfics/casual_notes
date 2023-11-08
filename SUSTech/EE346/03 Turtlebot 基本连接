@@ -1,0 +1,32 @@
+联网:
+	422_Lab(_Wi-Fi5)
+	密码 422422422
+
+连接 Pi:
+	ssh pi@192.168.3.216 -A
+	密码 1
+
+PC 上配置一下自己 IP 之类:
+	export TURTLEBOT3_MODEL=burger
+	export ROS_MASTER_URI=http://192.168.3.200:11311
+	export ROS_HOSTNAME=192.168.3.200
+
+Pi 上配置一下:
+	export TURTLEBOT3_MODEL=burger
+	export ROS_MASTER_URI='http://192.168.3.200:11311'
+	export ROS_HOSTNAME='192.168.3.216'
+	export LDS_MODEL=HLS-LFCD2？？？
+
+测试 1:
+	PC 上开启 roscore, Pi 上检查 rostopic list.
+
+测试 2:
+	PC 上 roscore.
+	Pi 上启动 bringup:
+		roslaunch turtlebot3_bringup turtlebot3_robot.launch
+	PC 上启动 teleop:
+		roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+			(这个似乎就是需要 export TURTLEBOT3_MODEL=burger 的.)
+
+【【【见 03.5 TF 末尾】】】
+
