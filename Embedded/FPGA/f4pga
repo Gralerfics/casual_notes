@@ -1,0 +1,4 @@
+source $FPGA_CONDA_SH/conda.sh
+conda activate xc7
+TARGET="nexys4ddr" make -C project_name
+

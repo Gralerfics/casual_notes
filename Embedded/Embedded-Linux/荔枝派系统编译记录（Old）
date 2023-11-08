@@ -1,0 +1,174 @@
+[*] TF card partition
+
+sudo fdisk -l
+/* device list */
+
+sudo umount /dev/sdXx
+/* umount tf device, if exists */
+
+sudo fdisk /dev/sdX
+/* Steps:
+	若已存分区即按 d 删除各个分区
+	通过 n 新建分区，第一分区暂且申请为16M(f1c100s)、32M(v3s)，剩下的空间都给第二分区
+		第一分区操作：n p 1 2048 +32M
+			p 主分区、默认 1 分区、默认2048、+32M
+		第二分区操作：n 后面全部回车默认即可
+			p 主分区、默认 2 分区、默认、默认剩下的全部空间
+	p 查询分区表确定是否分区成功
+	w 保存写入并退出
+*/
+
+sudo mkfs.vfat /dev/sdX1
+sudo mkfs.ext4 /dev/sdX2
+	sudo mkfs.vfat /dev/sdc1
+	sudo mkfs.ext4 /dev/sdc2
+df -T -h
+/* part 1 -> fat, part 2 -> ext4, check */
+
+========================================================================================================================================
+[*] u-boot
+
+git clone https://github.com/Lichee-Pi/u-boot.git -b v3s-current
+cd u-boot
+
+make distclean
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- LicheePi_Zero_defconfig
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+/* get u-boot-sunxi-with-spl.bin */
+
+touch boot.cmd
+/* Contents: 设备树文件名自定, 这里使用带 Dock 板的
+	setenv bootm_boot_mode sec
+	setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait panic=10 earlyprintk rw
+	load mmc 0:1 0x41000000 zImage
+	load mmc 0:1 0x41800000 sun8i-v3s-licheepi-zero-dock.dtb
+	bootz 0x41000000 - 0x41800000
+*/
+./tools/mkimage -C none -A arm -T script -d boot.cmd boot.scr
+/* get boot.scr -> part 1 */
+
+sudo dd if=u-boot-sunxi-with-spl.bin of=/dev/sdX bs=1024 seek=8
+
+========================================================================================================================================
+[*] Linux
+
+git clone -b zero-5.2.y --depth 1 https://github.com/Lichee-Pi/linux.git
+cd linux
+
+/* 注意换用 gcc9, 使用最新的 gcc 需要修改部分源码 */
+
+make distclean
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- licheepi_zero_defconfig
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4
+/* kernel, zImage in arch/arm/boot/ -> part 1 */
+
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=out -j4 modules
+(make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=out -j4 modules_install 这个似乎是把模块放进开发机的文件系统, 应该没用.)
+/* modules, in out/, modules -> [filesystem]/lib/s? */
+
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- dtbs
+/* if device tree is modified. sun8i-v3s-licheepi-zero(-dock).dtb in arch/arm/boot/dts/ -> part 1, 使用哪个 dtb 看前面 boot.cmd */
+
+========================================================================================================================================
+[*] buildroot
+
+wget https://buildroot.org/downloads/buildroot-2017.08.tar.gz
+tar xvf buildroot-2017.08.tar.gz
+cd buildroot-2017.08/
+/* 或者版本再高一些, 17 换成 19, 21.
+	wget https://buildroot.org/downloads/buildroot-2021.08.tar.gz
+	tar xvf buildroot-2021.08.tar.gz&&cd buildroot-2021.08/
+*/
+
+make (dist)clean
+make menuconfig
+
+/* Configurations: 一些基本的配置, 也可以用 defconfig, 不过这里没有现成的. 参考 https://javonpeng.blog.csdn.net/article/details/114500777
+	Target options
+		Target Architecture (ARM (little endian))
+		Target Binary Format (ELF)
+		Target Architecture Variant (cortex-A7)
+		Target ABI (EABIhf)
+		Floating point strategy (VFPv4-D16)
+		ARM instruction set (ARM)
+		/* 来源于 V3S 的基本信息: (F1C100S 的话, 参考 https://www.cnblogs.com/twzy/p/15355842.html#2.%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%A7%BB%E6%A4%8D)
+			CPU
+			ARM Cortex A7 @ 1.2GHz
+			Support NEON Advanced SIMD instruction
+			VFPv4 Floating Point Unit
+		*/
+	Toolchain
+		配置为外部工具链. 这台上用的 arm-none-eabi-, 不过似乎大多都用的是 arm-linux-gnueabihf-.
+		路径为 /home/gralerfics/MyFiles/Environments/Embedded/gcc-arm-none-eabi-10.3-2021.10/arm-none-eabi/
+		但是好像这个版本的 buildroot 选项里还支持不到 gcc10 Emmmm.
+		所以要么下一个古早版本的 gnueabihi, 参考 https://blog.csdn.net/p1279030826/article/details/105021536, 要么下一个 2021 后版本的 buildroot
+		* Update:
+			选项里还有一个 kernel headers series, 似乎是要到工具链里头看版本号.
+			arm-none-eabi 似乎是面向裸机嵌入式的, 不知道能不能混用, 还是搞一个 arm-linux-gnueabihf 吧.
+			放在了 /home/gralerfics/MyFiles/Environments/Embedded/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf/
+			既然如此, 前面 uboot 和 linux 的提示换成 CROSS_COMPILE=arm-linux-gnueabihf- 了, 不知道是不是必要.
+	System configuration
+		这里头可以改 root 密码, hostname 和其他一些东西.
+	Kernel
+		这干啥用的?
+	Target Package
+		一些软件包.
+		* Update:
+			看起来前面的工具链得下个高版本的, 比如这里如果要选 qt5 要求工具链版本就得高于 5.
+	Bootloaders
+		这里头看到了 u-boot Emmmm, 和文件系统什么关系, 可以直接用吗. 后面研究.
+/*
+
+make -j4
+/* get rootfs.tar in output/images/ */
+
+sudo tar -xvf rootfs.tar -C /media/xxxxx (用 pwd 查看第二个分区的路径)
+/* -> part 2 */
+
+========================================================================================================================================
+[*] Debian fs ?
+
+========================================================================================================================================
+[*] Problems
+	[*] ... no working init found ...
+		某次直接拔供电再开开始就会死掉, 然后以为文件系统损坏, 重新解压 rootfs.tar, 正常引导到最后报这个错然后进 panic.
+		原因不知道, 重新分区格式化 tf 卡之后正常. 正常 poweroff 再开也正常.
+	[*]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

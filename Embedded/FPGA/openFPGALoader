@@ -1,0 +1,2 @@
+openFPGALoader -b nexys_a7_100 x.bit
+
