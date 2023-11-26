@@ -1,0 +1,12 @@
+Clash for Windows 官方 Github Release 下载相应包。
+
+移到 Ubuntu 上再解压否则应该是有权限问题会连接不到 Clash Core。
+
+第一次从终端运行 cfw，打开开机启动选项，导入订阅。
+在 cfw 仍在运行的情况下重启就能开机启动，终端静默。
+
+【要注意】设置 - 网络 - 代理设置（齿轮按钮） - http 和 https 代理配置为 localhost:7890（根据 cfw 客户端内的端口号可修改）。
+
+如果要方便点也可以制作应用列表快捷方式，略。
+
+参考：http://www.manongjc.com/detail/26-nsrbksrcybvhrom.html

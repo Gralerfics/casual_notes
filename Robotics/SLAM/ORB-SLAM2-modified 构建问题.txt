@@ -1,0 +1,22 @@
+是高翔博士仓库里修改并加入点云处理的 ORB-SLAM2。
+
+首先要把原 ORB-SLAM2 里的 Vocabulary 拷进去，文件大所以他没传 Git。
+
+然后构建需要 pcl，Github 上下载就行——好吧其实 apt 也行而且更方便，但比较大和更新中的工程感觉自己编译更好些。
+如果自己构建则需要先安装 libflann-dev（好像是找最近邻的），libboost-date-time-dev，libboost-filesystem-dev，libboost-iostreams-dev，以及 libvtk7-dev。
+（这些感觉都比较基础和常用，所以就 apt 装装了……？）
+
+然后不出意外 PCL 构建又是一堆问题。忘了什么问题，总之一开始用的最新的 1.13，后来决定换掉。索性最后还是 apt 了，apt 装的 PCL 是 1.10 版本。
+不知道要求的 1.7 版本如何，1.10 和 1.13 编译时都要求 c++14。所以 CMakeLists.txt 当中要改成支持 c++14。
+【！】以及那个 COMPILEDWITHC11 还得原样加上，代码中有一处计时用的代码，开启 COMPILEDWITHC11 就是用 steady_clock，否则用的是 c++11 以后就弃用的 monotonic_clock，就会报错。
+
+然后还有就是构建 ORB-SLAM2 时也要改的地方，LoopClosing 第 50 行关于 map 的一个 const 的位置：
+	“4、LoopClosing.h 第 50 行中间，const KeyFrame* 改成 KeyFrame* const，否则报错 std::map 相关的问题（Github pull 585）。”
+
+然后是运行起来会出现段错误的问题。
+跑去三个 CMakeLists.txt 把里面的六处 -march=native 全删掉，然后删掉三个 build 重新构建。
+
+然后是运行起来不实时显示点云的问题（tmd 有完没完）。
+是滤波部分有问题，进 pointcloudmapping.cc，找到 viewer 函数，把 voxel.setInputCloud(... 到 ... swap(*tmp); 三句话注释掉，也就是不滤波直接显示。
+	可参考：https://blog.csdn.net/Xuesengxinyi/article/details/93469079
+最后保存点云也可参考上文——淦，保存也有问题，算了先不管了。

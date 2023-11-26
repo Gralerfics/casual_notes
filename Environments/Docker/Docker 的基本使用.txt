@@ -1,0 +1,189 @@
+详细的 Docker 官方文档：https://docs.docker.com/get-started/
+不错的 Docker 教程：https://www.bilibili.com/video/BV1og4y1q7M4
+
+
+
+首先是 Docker 环境安装，见另一个文档。
+Docker Desktop 比较方便用，也可以和一些 IDE 联动，也可以不用，只用命令行工具。
+以及装了它之后好像 Server 会变成 Docker Desktop。
+
+
+
+【一些基本操作】
+Docker 教程见上。还有菜鸟教程方便查询，比如容器运行这里：
+https://www.runoob.com/docker/docker-container-usage.html
+包含 run、start、stop、exec、attach 等。
+例如：
+	下好 ubuntu 镜像后第一次可以 docker run 创建容器：（-it 是进入交互界面，--name 和后面的参数指定容器名，ubuntu 是下的镜像名，后面是命令行参数）
+		docker run -it --name test-env ubuntu /bin/bash
+	进去之后再 exit 就会退出，同时结束容器的运行。
+	如果不想结束就在里面 Ctrl + P + Q，只会退出交互模式，不会结束运行。
+	如果想后台启动就加参数：
+		... -d ...
+	还有传入环境配置之类的参数用：
+		... -e xxx ...
+	还有端口映射可以：
+		... -p <主机端口>:<容器内端口> ...
+	之后再想进入已有的容器可以：
+		docker start test-env
+	但这个只是运行起来，如果想再进入交互模式可以用 attach 和 exec：
+		docker exec -it test-env /bin/bash
+		以及 docker attach test-env
+	用 exec 的话进去是开了个新命令行，而 attach 会进入之前正在运行的终端而不启动新进程。
+		（因为这个原因，exec 进去再 exit 的话容器不会停止运行，因为是新开的，原先的还在运行；
+		而 attach 进去再退出的话就是把正在运行的关了，如果关了后没别的进程了，整个容器也会自动停下；
+		所以可以看出 exit 本质是退出当前运行的进程）
+	查看正在运行的镜像：
+		docker ps
+	加 -a 参数则显示所有容器的启动记录。
+以及以上操作在 Docker Desktop 里边直接点是会刚运行就结束的——因为直接运行后没有前台应用（如交互命令行等），Docker 认为没用了就又关了。
+比如或者上面直接 -d 后台启动，也是会导致刚运行就结束。
+
+查看 CPU 状态可以
+	docker stats
+查看日志可以
+	docker logs -tf --tail <条数> test-env
+查看容器里的进程信息可以
+	docker top test-env
+查看容器元数据可以
+	docker inspect test-env
+
+还有把容器内文件拷贝到主机可以
+	docker cp <容器id或容器名>:<容器内路径> <目标主机路径>
+
+
+
+【图形化后台看板】
+Portainer 是一个图形化界面管理工具，可以提供一个后台面板。
+	docker run -d -p 8088:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock --privileged=true portainer/portainer
+	（-d 后台运行；-p xxx:xxx 暴露端口；-v 卷挂载）
+进去配置好账号然后 Local 即可。
+不过用 Docker Desktop 和 VSCode 之类应该都够用了。
+
+
+
+【封装自己的镜像】
+在现成只读镜像实例化的容器基础上进行新的更改，然后
+	docker commit -a="author" =m="message" <容器名> <新镜像名>:<Tag>
+Tag 要么就不写，如果写了 Tag 要注意以后 docker run 之类也得带上 Tag（一般 Tag 里写版本号），
+否则 docker 都会去自动找最新的 latest 版本，自己封装着用的镜像显然找不到在线最新版的，所以会报错。
+
+
+
+【关于卷（Volume）】
+就是把容器内的目录和主机上的某个目录同步，达成数据持久化等目的。
+基本的：
+	其实前面 portainer 的命令里就有，就是那个参数 -v。
+		... -v <主机目录>:<容器内目录>
+	比如：
+		docker run -it -v /home/test:/home ubuntu /bin/bash
+	就把容器内的 /home 映射到主机下的 /home/test（主机没有对应目录，创建）。
+		【待验证：如果主机或容器内的指定目录本身有数据？】
+	这就挂载上了。
+	然后可以通过：
+		docker inspect <容器名>
+	查看数据中的 Mounts 段，会显示挂载信息——从 Source 主机内地址到 Destination 容器内地址。
+	也可以一句命令里多放几个 -v。
+此外，我们可以用
+	docker volume ls
+查看所有卷的情况。显示出来的 VOLUME NAME 是自动生成的序列的就是匿名挂载的卷。
+【匿名挂载】就是在 -v 时只写了容器内的路径，没有写容器外的路径（不像前面的例子用冒号分开写了两个路径），如：
+	... -v <容器内路径> ...
+【具名挂载】就：
+	... -v <卷名>:<容器内路径> ...
+注意冒号左边这里写的是卷名，不是上面基本示例里面的主机下目录。
+这时候用
+	docker volume inspect <卷名>
+看下信息可以知道如果像这样没有指定主机下的具体路径，那么就会默认保存到
+	/var/lib/docker/volumes/<卷名>/_data
+下。
+再加上前面的【指定路径挂载】：-v <宿主机路径>:<容器内路径>。
+	注：路径一般以 / 开头，依此区分是指定路径还是卷名。
+还有关于读写权限，可以写在 -v xxx 后面再带个 :ro 或者 rw 之类，例如：
+	-v testVolumeName:/etc/nginx:ro
+如果这么搞了就说明容器内看它就是 Read-Only，只能通过主机从外边修改了。
+
+
+
+【Dockerfile 中的卷挂载】
+Dockerfile 即用来构建 docker 镜像的构建文件，有点类似 Makefile 的作用。
+这里先提它其中一个用来挂载卷的作用（前面 -v 是方式一，这里是方式二），先直接举例：
+	FROM centos
+	VOLUME ["volume01", "volume02"]
+	CMD echo "=== End ==="
+	CMD /bin/bash
+保存为 Dockerfile 名字。
+然后用
+	docker build -f <dockerfile 路径> -t <新镜像名>:<Tag> .
+	（注意最后有个点，是本次执行的上下文路径，点就是当前目录；默认为 Dockerfile 所在目录）
+	（文件就起名 Dockerfile 的话就不用 -f 指定了，默认就是当前下面的 Dockerfile）
+	（上下文路径中不要放多余东西，会一起打包发给 Docker Server）
+	（上下文路径是为了方便 Docker 进行一些本地文件使用的，例如 COPY 指令复制文件是以上下文路径为依据的；
+	因为是 C/S 结构，Docker Server 不方便调取本地目录，故 docker build 会把用户指定的上下文路径内的东西都打包发过去）
+来依据 Dockerfile 构建镜像。
+用上面的例子的话，volume01 和 volume02 采用的是【匿名挂载】，就是只写了容器内目录，
+所以 run 起来之后根目录下有 volume01 和 volume02，默认对应宿主机的 /var/lib/docker/volumes/<卷名（匿名挂载就是随机的哈希串）>/_data（见前）
+不确定的话用 docker inspect（Mounts 段） 或者 docker volume inspect 也能查看。
+
+
+
+【数据卷容器】
+容器之间的数据卷同步。
+可以用 --volumes-from 从一个父容器挂载卷到子容器。被挂载的父容器就称为数据卷容器。
+	（--volumes-from 后面的是父容器）（但就算父容器删了，数据也不会丢）
+	【所以整个其实是一个共享、备份，不是依赖的】
+	（生命周期持续到无人引用，如果映射到本地，本地的数据不会被删除）
+这个就略一下吧。
+
+
+
+【关于 Dockerfile】
+在官方 Docker Hub（hub.docker.com）上的镜像都是由 Dockerfile 构建的。
+点进去一般会有 Dockerfile 的链接，可以看它具体怎么写的。
+也可以通过 docker history <镜像名> 查看构建历史（过程）。
+
+一些基本的特征：
+	指令都是大写；
+	顺序执行；
+	# 为注释；
+	
+基本的指令：
+	FROM 基础镜像
+	MAINTAINER 维护者信息（姓名邮箱）
+	RUN 镜像构建时需要执行的命令
+	ADD 步骤，添加内容
+		ADD 后边可以加压缩包，第二个参数设置解压的目录，会自动解压
+	WORKDIR 进入镜像后默认处在的工作目录
+	VOLUME 挂载目录
+	EXPOSE 暴露端口
+	CMD 指定容器启动时要运行的命令（只有最后一个生效（？）且可被替代（docker run 时最后传入的参数直接替代 CMD 的指令））
+	ENTRYPOINT 指定容器启动时要运行的命令（docker run 最后传入的参数（命令）可以追加在后面）
+		【细说 CMD 和 ENTRYPOINT】
+	ONBUILD 当构建一个被继承（--volumes-from）的镜像时会运行的指令（触发指令）
+	COPY 类似 ADD，将文件拷贝到镜像中（从 docker build 最后传入的上下文路径，见前）
+	ENV 构建时设置环境变量
+
+大量镜像都是从 FROM scratch 来的。
+
+构建实例：
+	FROM centos
+	MAINTAINER xxx<xxx@xxx.xxx>
+	
+	ENV MYPATH /usr/local
+	WORKDIR $MYPATH
+	
+	RUN yum -y install vim
+	RUM yum -y install net-tools
+	
+	EXPOSE 80
+	
+	CMD echo $MYPATH
+	CMD ["ls", "-a"]
+	CMD echo "=== End ==="
+	CMD /bin/bash
+
+可以通过 docker history <镜像名> 查看构建历史（过程）。
+
+构建 Tomcat 镜像实例：https://www.bilibili.com/video/BV1og4y1q7M4?p=30&spm_id_from=pageDriver&vd_source=e4093c6fb792a1bbcd190aded7156ed1
+
+

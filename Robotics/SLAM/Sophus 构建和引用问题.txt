@@ -1,0 +1,18 @@
+首先从 Github 直接 clone，make 时会出现错误，可参考：https://blog.csdn.net/hanyulongseucas/article/details/87715186。
+解决方法大致就是在 CMakeLists.txt 前面加上 set(CMAKE_EXE_LINKER_FLAGS "-no-pie") 再构建即可。
+关于 -fPIC 等可参考前边链接文末的链接。
+
+对，装之前还要装依赖的 fmt，也从 Github 下就行。
+
+然后是 CMake 引入项目时，以往版本使用的 Sophus_INCLUDE_DIRS 应该是因为 Sophus 更新的原因，后来不用了。
+可参考：https://www.ybliu.com/2020/05/sophus-include-dir-null.html。
+具体一点比如说，在引入时：
+
+set(fmt_DIR xxx)
+find_package(fmt REQUIRED)
+set(Sophus_DIR xxx)
+find_package(Sophus_DIR REQUIRED)
+
+就行，然后在链接 target 处直接加入 Sophus::Sophus：
+
+target_link_libraries(xxx ... Sophus::Sophus ...)

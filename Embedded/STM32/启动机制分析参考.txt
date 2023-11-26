@@ -1,0 +1,21 @@
+【！stm32启动过程（mdk和gcc双环境分析）】
+	https://blog.csdn.net/weixin_42328389/article/details/120656722
+	https://blog.csdn.net/a2529280665/article/details/121576020
+【stm32内存管理】
+	（含各段说明，双环境分析）https://blog.csdn.net/weixin_42328389/article/details/120622384
+	https://blog.csdn.net/zhuguanlin121/article/details/119799860
+
+【ld文件语法规则（VMA与LMA，有讲到AT）】https://blog.csdn.net/shenjin_s/article/details/88712249
+【ld文件分析（！）】https://www.cnblogs.com/RegressionWorldLine/p/11968467.html
+【ld文件AT的含义（VMA与LMA）】https://blog.csdn.net/I_O_fly/article/details/128492423
+
+【arm基础（和寄存器）】https://blog.csdn.net/weixin_42328389/article/details/121855164
+【arm汇编数据处理指令】https://weibo01.blog.csdn.net/article/details/83010193
+【arm汇编ldr指令（详细，包含伪指令）】https://blog.csdn.net/ZXG0808/article/details/125330428
+【arm汇编mov ldr str等】https://blog.csdn.net/a3121772305/article/details/126532116
+【arm汇编跳转指令】
+	（不全，但包含ldr等）https://blog.csdn.net/ddddfang/article/details/122939065
+	（还行）https://blog.csdn.net/u012944254/article/details/104014150
+	https://blog.csdn.net/szullc/article/details/122333827
+	（乱）https://blog.csdn.net/u013083059/article/details/17934511
+【汇编 segment】https://zhuanlan.zhihu.com/p/340338115

@@ -1,0 +1,12 @@
+顺次：
+安装 m4（apt 即可）
+安装 gmp, mpfr, mpc（在 (ftp://)gcc.gnu.org/pub/gcc/infrastructure/）（记得：configure 再 make 再 make install，指定路径和依赖用 configure --help 看下）
+安装 gcc（configure 加参数 --enable-languages=c,c++ 指定；加 --disable-multilib 只装 64 位版本；--enable-checking=release）
+（前面东西安装在本地的话要么自己配 PATH，要么 configure 再带参数 --with-gmp=xxx 等）
+如果不是全局，则加环境变量（~/.bashrc 里加 export PATH=xxx/bin:$PATH），加完要记得 source ~/.bashrc 刷新
+
+（注：configure 可用 --prefix= 指定安装目录）
+
+需要修改 .so 文件，参考：blog.csdn.net/tigerleap/article/details/49100531。
+总之就是找到以前的全局的 .so.6，例如 usr/lib64(/arm-gnuxxxx) 之类里面，然后从新的，一般在 usr/local/xxx 里头，
+一个软链接建回去 libstdc++.so.6。

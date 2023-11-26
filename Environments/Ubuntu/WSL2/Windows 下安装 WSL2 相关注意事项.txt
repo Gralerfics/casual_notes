@@ -1,0 +1,5 @@
+Windows要求2004以上（内部版本190xx以上）
+磁盘引导要求MBR什么的
+
+wsl注意版本，指令都不一样
+应用商店下不了的可以直接下应用包，放在Environments/Ubuntu/wsl_tools里了

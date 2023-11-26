@@ -1,0 +1,14 @@
+安装新的 cmake 之后把原先的删了，要注意环境变量配好，不要后面构建的时候还调用原来的，多检查版本号。
+
+在 cmake 时加参数 -DCMAKE_INSTALL_PREFIX=xxx 指定安装位置。
+
+构建完，sudo make install 完了保存一下 build 里的 install_manifest.txt，后续用 cat install_manifest.txt | sudo xargs rm 即可删除之前安装的内容。
+
+关于 cmake 的 find_package()，CMAKE_MODULE_PATH 和 Modules 目录等里头是放 Findxxx.cmake 的，和 xxx-config.cmake 不一样。
+
+没有装全局的话目前暂时的解决方法是在 find_package() 之前 set() 一个 xxx_DIR，指向已安装包里面 xxx-config.cmake 所在的目录。
+【在利用 CMake 构建时也会找不到包，使用 -D 参数，如 -Dxxx_DIR=xxx】
+有的包似乎 .cmake 都不太对劲，不行就手动 include_directories 具体路径了，假如有 lib 会有点难搞。
+有其他更好做法后续补充。
+
+关于 find_package() 除了官网文档有个不错的讲解，参考：blog.csdn.net/weixin_41855010/article/details/108318385。

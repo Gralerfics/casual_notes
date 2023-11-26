@@ -28,5 +28,5 @@ Pi 上配置一下:
 		roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
 			(这个似乎就是需要 export TURTLEBOT3_MODEL=burger 的.)
 
-【【【见 03.5 TF 末尾】】】
+【【【见 TF 末尾】】】
 

@@ -1,0 +1,9 @@
+CUDA 官网（developer.nvidia.com/cuda-toolkit-archive）选择好用下面的 wget 即可。
+安装时如果已经有 NVIDIA 驱动就在中间某页禁用第一项显卡驱动安装。
+以 11.3 为例（和 Pytorch 版本之类的比较协同）。
+然后配置环境变量，PATH 前面加 /usr/local/cuda-11.3/bin，LD_LIBRARY_PATH 前面加 /usr/local/cuda-11.3/lib64。
+source ~/.bashrc 刷新后看 nvcc -V 验证一下。
+
+CUDNN 也去官网（developer.nvidia.com/rdp/cudnn-archive）下载对应版本，这个还需要登录。
+下载 deb 就行，然后 sudo dpkg -i 安装——下载比较慢。
+装完好像不太对劲，算了用到再说吧。

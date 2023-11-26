@@ -1,0 +1,22 @@
+安装 VSCode 的 Docker 扩展、Docker Desktop 之后即可使用 VSCode 管理 Docker。
+
+之前没装 Docker Desktop 时好像还有权限问题之类，装了之后就没了，应该是正常的。
+【Update：有问题！！！】之前不知道是为什么后来就没了……
+这次重装就有权限问题了——也就是普遍的需要 sudo 运行的问题。
+只要加 sudo 其实问题不大，重要的是比如 VSCode 之类的就没法进行连接了！
+然后还是不知道为什么加用户组完全没用，也找不到原因，似乎网上的人都解决了（……）。
+
+所以最后参考官网的 Rootless 模式，
+	dockerd-rootless-setuptool.sh install
+（好像先要下一下，不确定，试下就行）
+但 Rootless 模式据说有诸多限制，我估计我也暂时碰不到先不管了。
+
+参考：
+	官方文档
+	官方文档方法的概括：blog.csdn.net/fanghailiang2016/article/details/127100079
+	有一个仔细分析并解决一部分限制的，还没仔细看：blog.csdn.net/hanxiaotongtong/article/details/124876282
+
+Docker Desktop 需要开启虚拟化！！！（以惠普的 BIOS 为例，启用“虚拟化技术”）
+否则一直卡在 Docker Desktop Stopped！！！
+
+我觉得一大部分问题全来自于这个狗惠普。

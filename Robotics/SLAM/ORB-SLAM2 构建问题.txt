@@ -1,0 +1,22 @@
+0、构建 OpenCV 前先安装 libgtk2.0-dev 和 pkg-config！！！用 apt 就可以。如果已经装好 OpenCV 则 make uninstall 掉重来！！！（淦你大爷）
+	也就是 cmake 之后总结里面 GTK+ 2.x 应该要为 YES。
+1、首先是 Pangolin 用最新版会出错，可以去下 0.5 之类的版本，否则报错找不到 'slots_reference' 之类的问题。
+2、G2O 和 DBoW2 不用自己装，用它包里的就行，直接运行 ./build.sh（把里面 cmake 处该加的都加上相应的 -Dxxx_DIR=xxx）。
+	再次构建记得删掉三个 build 目录！
+3、在 Linux 上允许的话用到 usleep 的地方要加头文件 #include <unistd.h>，否则报错找不到 usleep。
+4、LoopClosing.h 第 50 行中间，const KeyFrame* 改成 KeyFrame* const，否则报错 std::map 相关的问题（Github pull 585）。
+5、……如果没有图形界面 Pangolin 最后会显示不了。只要轨迹文件的话就把例如 ./Examples/Monocular/mono_tum.cc 中的
+	ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
+里边的 true 改成 false。
+6、啊还有 OpenCV 得用 3，比如 OpenCV 3.2.0。还有如果是下的 3.2.0，cmake/OpenCVCompilerOptions.cmake 里面 21、22 行要注释掉，不知道为什么写了两个 else。也不知道为什么 Docker 里头搞的时候就没事。
+7、Pangolin 编译如果有些常量无了，和 ffmpeg 有关的那些，去编译安装下 ffmpeg 比如 3.4.12 版本，记得 make 前要 configure。这个就直接装全局了。
+7.5、OpenCV 也会出现 FFMPEG 的问题，表现为报错有些宏找不到（AV_CODEC 什么的），原因是 OpenCV 3.2.0 开发时预想的 ffmpeg 版本较旧，使用较新的 ffmpeg 的话有几个宏定义变了。跑去源码 modules/videoio/src/cap_ffmpeg_impl.hpp 开头加几个宏定义即可，具体参考：cnblogs.com/codeit/p/15748619.html 等。
+8、嗯 OpenCV 3.2.0 编译又出错了，说找不到 stdlib.h，cmake 时加一个 -DENABLE_PRECOMPILED_HEADERS=OFF。
+9、嗯嗯 OpenCV 它编译还有错，感觉是用了 gcc12 的原因。加两个 -DCMAKE_C(CXX)_COMPILER 切回自带的 gcc9 试试。啊对，第八条里面那个 -DENABLExxx 得写在这两个后面，我也不知道为什么。
+10、OpenCV 又他妈出错啦，这次是和 Python 相关的，进源代码 modules/python/src2/cv2.cpp 第 730 行 PyString_AsString(obj) 前面加个 (char *)。
+11、OpenCV 如果报 ippicv 下载相关的问题，要么直接不用：-DWITH_IPP=OFF，要么手动找 downloader.cmake 把包下载下来解压好，然后直接 set(OPENCV_ICV_PATH ".../ippicv_lnx" PARENT_SCOPE)，注释（CMake 3 以上 #[[ ... ]] 多行注释）掉其他的跳过下载。
+
+补充：
+1、关于轨迹的评估——暂略。
+2、RGB-D 相机 Example 需要提供 associations 文件，TUM 官网的 associate.py 可以直接用，可能要改一下：86、87 行 改成 ... = list(first_list) ... 和 ... = list(second_list) ...，因为 Python3 的原因。
+3、有些导致 make 不过的东西，如果影响不大，就直接重新 cmake 时加 -DWITH_XXX=OFF。比如 CUDA 装了之后它 cmake 时找到了，make 时就出错，没高兴查错就直接 OFF 掉了。

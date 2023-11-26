@@ -1,0 +1,12 @@
+安装 Docker。
+可以手动安装，看官方文档，也可以一句话自动安装：
+	curl -fsSl https://get.docker.com | bash -s docker --mirror Aliyun
+或者国内 daocloud：
+	curl -sSL https://get.daocloud.io/docker | sh
+没打对的话看菜鸟教程。
+
+安装 Docker-Desktop，官网下载 deb 包即可，但要装下依赖：
+	qemu-system-x86、pass 和 什么map来着。
+然后登录的话参考官网，需要 init 一下 pass。
+
+然后配置一下阿里云镜像加速。

@@ -135,6 +135,7 @@ robot_state_publisher 会发布 base_link 相对 base_footprint 的变换，
 	刚刚在 turtlebot3_description/urdf 同目录还发现一个 rviz 文件夹，里面的 model.rviz 多半是配置好的 rviz 界面，所以还可以在电脑上：
 		rviz -d `rospack find turtlebot3_description`/rviz/model.rviz
 	什么都有了！
+	有些情况下主机还是得用 roscore 不能 _remote，例如有些包自己启动 robot_state_publisher 之类的东西，可能导致冲突。
 
 【Update：麻了，感觉逻辑太通，仔细查了一下，人家文档果然有讲：https://emanual.robotis.com/docs/en/platform/turtlebot3/bringup/#bringup，所以一定要仔细看文档！！！】
 
