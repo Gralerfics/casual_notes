@@ -1,0 +1,146 @@
+[零碎]
+	data_save.py 用到 sudo apt install ros-noetic-rospy-message-converter，没有要装一下
+	VSCode 配置 ROS 开发环境，装插件 Ctrl + Shift + P - ROS: Update Python Path 自动更新路径，见另一处笔记
+		自动更新的是绝对路径，换成相对的似乎好一点，以及 teach-repeat 这个目录分类乱七八糟，
+		还有个 image_processing 在 ./src/teach_repeat 里，按某个脚本的需要还要手动加一下 ./src：
+			{
+			    "python.autoComplete.extraPaths": [
+				"/opt/ros/noetic/lib/python3/dist-packages",
+				"../../devel/lib/python3/dist-packages",
+				"./src"
+			    ],
+			    "python.analysis.extraPaths": [
+				"/opt/ros/noetic/lib/python3/dist-packages",
+				"../../devel/lib/python3/dist-packages",
+				"./src"
+			    ]
+			}
+		注意如果再让它更新它会覆盖，要么就不要再用插件的 update，要么似乎有用户配置的 json 给它加进去？
+	无关问题：
+		中文输入法卡死键盘：
+			点击切英文再切回来；
+			不卡后但输不了中文了，just wait?
+
+
+
+[使用 Webots] TurtleBot3 Burger 为例
+	[Webots 使用零碎记录]
+		1、注意保存是 Ctrl + Shift + S，或者手点，注意保存，以及修改时停下仿真再修改；
+		2、右键机器人对象可以：
+			显示机器人窗口 —— 打开一个可以查看机器人状态和各传感器数据的页面
+			编辑控制器 —— 控制器的源码，不过这里用 ros 控制的话选择的是预设的 ros 控制器，不用修改
+			Overlays —— 一些浮动窗口显示开关，例如摄像头画面
+			Edit/View PROTO source —— 机器人结构信息，例如各个轮子电机的 name，后面配置差速控制器传入的参数就是这个
+	[Webots 世界配置] 丢在 $(find teach_repeat)/worlds/tb3_wbt.wbt 里
+		0、场景随便找个预设，添加预设里的 TurtleBot3Burger；
+		1、初始位置 [x = 1.5, y = 0.5, z = 0]，方向 Quat[1, 0, 0, 0]；
+		2、controller 选择 "ros"；
+		3、controllerArgs 添加四个参数（作用详见 Webots + ROS 的笔记）：
+			--use-ros-control
+			--robot-description
+			--auto-publish
+			--name=tb3s
+		4、extensionSlot 里添加 JetBotRaspberryPiCamera (Solid)，配置改个合适的，这里定为：（这个相机似乎 x 轴是前方，z 轴向上，看需求可换原始的 Camera）
+			translation 0.06, 0, -0.03
+			rotation 0 0 1 0
+			fieldOfView 2
+			width 1920, height 860（改这两个需要保存后 reload）
+			far 10
+		5、运行起来有如下节点：/tb3
+		6、以及如下 topic：
+			/model_name
+			/tb3/...
+				一些零碎的 accelerometer/...、compass/...、gyro/...
+				LDS_01/... 雷达相关的，没删的话会有，laser_scan、range_image 之类
+				camera/... 摄像头，camera_info、image 之类
+				left_wheel_motor/torque_feedback
+				left_wheel_sensor/value
+				right_wheel_motor/torque_feedback
+				right_wheel_sensor/value
+		7、还会包含如下 parameter：
+			/tb3/robot_description 前面仿真器 controllerArgs 配好后会发布的机器人结构信息，后面会由 robot_state_publisher 节点转而发布为 tf 信息等
+	[启动 tb3 仿真的 tb3.launch]
+		0、参考 /opt/ros/noetic/share/webots_ros/launch/pioneer3at.launch 或 https://github.com/cyberbotics/webots_ros/blob/master/launch/pioneer3at.launch
+		1、启动 Webots（从 webots_ros 中）
+			<arg name="no_gui" default="false" doc="Start Webots with minimal GUI" />
+			<include file="$(find webots_ros)/launch/webots.launch">
+			    <arg name="mode" value="realtime" />
+			    <arg name="no_gui" value="$(arg no_gui)" />
+			    <arg name="world" value="$(find teach_repeat)/worlds/tb3_wbt.wbt" />
+			</include>
+			传入模式、是否需要 GUI 以及世界描述，启动后自动开始仿真
+		2、启动 robot_state_publisher
+			<node pkg="robot_state_publisher" type="robot_state_publisher" name="tb3_state_publisher" respawn="true" respawn_delay="5">
+			    <remap from="robot_description" to="/tb3/robot_description" />
+			</node>
+			参数的 respawn 会反复尝试启动节点，因为要等仿真器加载出来才有 robot_description 参数
+			启动后会有一些 topic：/joint_states/tf、/tf_static 从前面的 robot_description 参数里解析出来的坐标关系，给它发布出去，可以用 rosrun rqt_tf_tree rqt_tf_tree 查看
+			或者不写 remap，把这个 node 放进 group ns="tb3" 上下文中（改成这样了，好处是 /joint_states 会发布到 /tb3/joint_states，更合理一点大概）
+		3、差速控制器
+			启动 controller_manager 下的 spawner，传入 args="controller"（这里 args 的名字就是发布话题的命名空间/子命名空间名）：
+				<rosparam>
+				    controller:
+					type: "diff_drive_controller/DiffDriveController"
+					left_wheel: ['left wheel motor']
+					right_wheel: ['right wheel motor']
+					pose_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+					twist_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+				</rosparam>
+			轮子关节电机配置找前述 PROTO source
+			启动后会有如下 topic：
+				/tb3/controller/...
+					cmd_vel 最终暴露出的速度控制话题
+					odom 里程计话题
+					parameter_descriptions
+					parameter_updates
+			和一些 parameter：
+				/tb3/controller/... 就是前面 rosparam 里面的五个东西
+			* 存在问题：
+				controller_manager 启动控制器分 Load 和 Start 两步，一步把控制器配置加载，一步启动；
+				但一旦仿真中 reset（大左箭头，不是 reload）了，差速控制器节点还在，但 cmd_vel 话题没了（或者只有键盘控制在发布，没有订阅），
+				查看 rostopic info，发现原本订阅它的 /tb3 变成了 None，感觉像是仿真端失去同步（雾）了；
+				但在 rqt_controller_manager 中查看又发现是控制器自己停了（好像不止 Stop，还 Unload 了），再启动还能用。
+					就是说，传给这个差速控制器的参数（param 里的 controller 的五项）里面包含轮子的节点（？）名，
+					之前以为是 controller_manager 订阅 cmd_vel，计算后发给仿真器发的轮子驱动话题，
+					但现在看似乎是 controller_manager 通知仿真器的 /tb3 去订阅 cmd_vel，自己不管，
+					然后导致仿真器 reset 后遗忘了前面 controller_manager 对它的要求，不再订阅 cmd_vel，导致需要手动重启？
+						[TODO]
+						要研究的话应该得去看 controller_manager 的实现（没找到实现，只找到头文件）以及仿真器的 ros 控制器实现？
+							https://github.com/ros-controls/ros_controllers
+							/opt/ros/noetic/lib/controller_manager（spawner 之类在这）
+						感觉相关：
+							https://zhuanlan.zhihu.com/p/406419561 第六节rrr
+				* 一个粗糙的解决方法：
+					没有先装一下：sudo apt install ros-noetic-rqt-controller-manager
+					rosrun rqt_controller_manager rqt_controller_manager 启动可视化界面，仿真器 reset 后顺手把控制器也右键重开一下。
+					进一步，直接加进 launch 文件：
+						<node name="rqt_controller_manager" pkg="rqt_controller_manager" type="rqt_controller_manager" output="screen" />
+	[键盘控制]
+		rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/tb3/controller/cmd_vel
+		速度按 z 可以降低个十次出头，仿真器就不会警告速度超出限制
+
+
+
+[启动 data collect]
+	[建立 dc_tb3.launch]
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

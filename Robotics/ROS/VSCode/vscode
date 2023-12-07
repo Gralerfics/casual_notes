@@ -1,0 +1,12 @@
+使用 VSCode 配置 ROS 环境
+	装插件 ROS
+	关于 msg, srv 等生成的内容：
+		catkin_make 生成；
+		Ctrl + Shift + P，使用 ROS: Update Python Path（C/C++ 也有对应的）更新路径。
+			本质上是在 .vscode 里加了 settings.json 等，往参数 "python.autoComplete.extraPaths" 和 "python.analysis.extraPaths" 里
+			加了 devel/lib/python3/dist-packages 和 /opt/ros/noetic/lib/python3/dist-packages
+
+
+
+
+
