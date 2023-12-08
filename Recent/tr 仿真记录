@@ -76,6 +76,14 @@
 			参数的 respawn 会反复尝试启动节点，因为要等仿真器加载出来才有 robot_description 参数
 			启动后会有一些 topic：/joint_states/tf、/tf_static 从前面的 robot_description 参数里解析出来的坐标关系，给它发布出去，可以用 rosrun rqt_tf_tree rqt_tf_tree 查看
 			或者不写 remap，把这个 node 放进 group ns="tb3" 上下文中（改成这样了，好处是 /joint_states 会发布到 /tb3/joint_states，更合理一点大概）
+		2.1、雷达 tf 修正
+			如果使用仿真器内的雷达，其运行时发布的 LaserScan 消息的 frame_id 是仿真器决定的，
+			一般为 <robot_name>/<lidar_name>，例如 tb3/LDS_01（特殊符号全变下划线，例如这里 lidar_name 原本为 LDS-01；以及这里的 / 似乎就是名字的一部分，不代表什么层级关系？）
+			但这个 frame 默认不存在于 tf 中，所以要手动发布一个，用 static_transform_publisher：
+				<node pkg="tf" type="static_transform_publisher" name="tb3_lidar_tf" args="0 0 0 0 0 3.14 'LDS-01' 'tb3/LDS_01' 100" />
+			具体的名字查看 /scan 消息的 frame_id 后确定，以及官方示例就是这样做的；
+			[TODO] 这里还有个 pi 的 roll（？），不知道从何而来，但加了后是对的，不加的话建图乱飞。
+			* 同理，其他设备例如 imu 等的带 frame_id 的数据也要类似处理；[TODO] 有没有更好的方法？
 		3、差速控制器
 			启动 controller_manager 下的 spawner，传入 args="controller"（这里 args 的名字就是发布话题的命名空间/子命名空间名）：
 				<rosparam>
@@ -115,25 +123,56 @@
 					rosrun rqt_controller_manager rqt_controller_manager 启动可视化界面，仿真器 reset 后顺手把控制器也右键重开一下。
 					进一步，直接加进 launch 文件：
 						<node name="rqt_controller_manager" pkg="rqt_controller_manager" type="rqt_controller_manager" output="screen" />
+		4、rviz 与 gmapping
+			方便观察，加进去；
+			gmapping 的输出在 launch 后的终端中有些混乱，但 output="log" 好像关不掉它的控制台输出。
 	[键盘控制]
 		rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/tb3/controller/cmd_vel
 		速度按 z 可以降低个十次出头，仿真器就不会警告速度超出限制
+		顺手也可以加进 launch 文件，启动后也可以正常接受键盘输入
 
 
 
 [启动 data collect]
 	[建立 dc_tb3.launch]
-		
+		修改原本的，把只定义单个参数的 rosparam 全换成 param，一些适合的加到 arg 里，然后用 $(arg xxx) 放进 param
+			param 的 value="xxx" 里面可以有 $(arg xxx)、$(env xxx) 等替换参数
+			rosparam 中也可以替换，不过需要专门 subst_value="True" 开启
+			而且前者一般用于定义一个参数，后者一般用于定义整个 yaml，前者更合适，或者，晚点把所有相关的参数各写成一条 rosparam
+	
+
+
+[启动 data matching]
+	[建立 dm_tb3.launch]
+		同前修改一堆 param
+	[TODO]
+		一开始过了，但后来不知道改了什么跑不对了，回滚了 .wbt 文件就又好了；
+		忘记留出错的文件没法复现，中间出现了估计在左侧但疯狂右转的行为；
+		……
+		又感觉没改什么，跑飞了，这次文件留下了；
+		……
+		再回滚跑一次也飞了，也就是说，同样的文件跑两次不一样了，再来一次又正常了；
+		——
+		又飞了，我非得看看难不成哪里有时间或者随机数吗？
 
 
 
-
-
-
-
-
-
-
+[总启动流程]
+	0、具体参数可能变更
+	1、启动仿真环境
+		看情况传参：
+			roslaunch teach_repeat tb3_wbt.launch
+			roslaunch teach_repeat tb3_wbt.launch rviz:=false
+		如果需要 reset，先 Webots 中 reset 后，在 rqt_controller_manager 中重新启动 controller 控制器
+	2、启动 teach
+		roslaunch teach_repeat dc_tb3.launch
+		roslaunch teach_repeat dc_tb3.launch teleop_keyboard:=false
+	3.0、启动 gmapping
+		roslaunch teach_repeat tb3_gmapping.launch
+		给出一个 /map 方便查看，包括目标点也会发布到相对 /map 参考系下
+	3、启动 repeat
+		带上路径，例如：
+		roslaunch teach_repeat dm_tb3.launch load_path:="/home/gralerfics/MyFiles/Workspace/tr_data/2023-12-07_22:28:59"
 
 
 
