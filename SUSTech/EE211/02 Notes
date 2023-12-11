@@ -1,0 +1,32 @@
+启动
+ros2 launch iqr_tb4_bringup bringup.launch.py
+
+------
+
+建图
+ros2 launch cartographer_ros demo_revo_lds.launch.py
+
+键盘
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+
+存图
+ros2 run nav2_map_server map_saver_cli -t /map -f map0x
+
+rviz2
+
+加载（只发布一次）
+ros2 run nav2_map_server map_server --ros-args -p yaml_filename:=map02.yaml
+ros2 run nav2_util lifecycle_bringup map_server
+
+------
+
+构建
+colcon build --packages-select xxx
+
+构建并运行
+colcon build --packages-select xxx && ros2 run xxx xxx
+	colcon build --packages-select lab08 && ros2 run lab08 astar
+	. install/setup.sh && colcon build --packages-select grasp && ros2 launch grasp grasp.launch.py
+
+------
+底盘 IP: 192.168.186.3

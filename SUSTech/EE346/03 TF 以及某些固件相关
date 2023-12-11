@@ -141,3 +141,31 @@ robot_state_publisher 会发布 base_link 相对 base_footprint 的变换，
 
 
 
+【【【补充】】】
+OpenCR/arduino/opencr_arduino/opencr/libraries/turtlebot3/examples/turtlebot3_burger/turtlebot3_core/turtlebot3_core.ino
+OpenCR/arduino/opencr_arduino/opencr/libraries/turtlebot3/examples/turtlebot3_burger/turtlebot3_core/turtlebot3_core_config.h
+OpenCR/arduino/opencr_arduino/opencr/libraries/turtlebot3/include/turtlebot3/turtlebot3_motor_driver.h
+OpenCR/arduino/opencr_arduino/opencr/libraries/turtlebot3/src/turtlebot3/turtlebot3_motor_driver.cpp
+
+【补充 cmd_vel_rc100】
+turtlebot3_core.ino 805行 updateGoalVelocity，可以看到几个目标速度输入是叠加的。
+
+【速度控制过程】
+turtlebot3_core.ino 82行开始为速度发送，tTime[x] 是各个时间过程的“上一个 t”。
+	速度发送的频率判断用的是 tTime[0]，cmd_vel 接收新消息用的是 tTime[6]。
+
+turtlebot3_core.ino 167行 cmd_vel 话题的消息回调 commandVelocityCallback 中赋值 goal_velocity_from_cmd，并更新 tTime[6]（启动定时器）。
+
+第一层判断判断是否满足最大有效频率，用 tTime[0]，限制更新并判断（updateGoalVelocity）速度的频率不超过 30Hz。
+	turtlebot3_core_config.h 中的 CONTROL_MOTOR_SPEED_FREQUENCY。
+
+其内执行 updateGoalVelocity 将 goal_velocity 更新为 cmd_vel 最近一次接收的 goal_velocity_from_cmd（其它来源略）。
+
+第二层用 tTime[6] 判断 cmd_vel 的消息是否过期，即 goal_velocity_from_cmd 里的东西实际上 500ms 就过期了。
+	过期了就发 zero_velocity，否则发 goal_velocity。
+		问题是实测不发消息了它还是继续走，可能实机里面的固件 1.2.2 和这里还不太一样，再检查一下历史变更。
+			好的，确实如此，1.2.2 版本下没有第二层判断。
+				https://github.com/ROBOTIS-GIT/OpenCR/tree/39faab1301116f8fdab6f3d6ffc52d7def4c43ae/arduino/opencr_arduino/opencr/libraries/turtlebot3/examples/turtlebot3_burger/turtlebot3_core
+			这个固件的版本控制吧……有点乱七八糟的。
+
+给驱动器发消息在 motor_driver.controlMotor，motor_driver 是 Turtlebot3MotorDriver, 声明在 turtlebot3_motor_driver.h，实现在 .cpp。
