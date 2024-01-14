@@ -16,10 +16,6 @@
 			    ]
 			}
 		注意如果再让它更新它会覆盖，要么就不要再用插件的 update，要么似乎有用户配置的 json 给它加进去？
-	无关问题：
-		中文输入法卡死键盘：
-			点击切英文再切回来；
-			不卡后但输不了中文了，just wait?
 
 
 
@@ -39,7 +35,7 @@
 			--use-ros-control
 			--robot-description
 			--auto-publish
-			--name=tb3s
+			--name=tb3
 		4、extensionSlot 里添加 JetBotRaspberryPiCamera (Solid)，配置改个合适的，这里定为：（这个相机似乎 x 轴是前方，z 轴向上，看需求可换原始的 Camera）
 			translation 0.06, 0, -0.03
 			rotation 0 0 1 0
@@ -107,6 +103,9 @@
 				controller_manager 启动控制器分 Load 和 Start 两步，一步把控制器配置加载，一步启动；
 				但一旦仿真中 reset（大左箭头，不是 reload）了，差速控制器节点还在，但 cmd_vel 话题没了（或者只有键盘控制在发布，没有订阅），
 				查看 rostopic info，发现原本订阅它的 /tb3 变成了 None，感觉像是仿真端失去同步（雾）了；
+				
+				
+				
 				但在 rqt_controller_manager 中查看又发现是控制器自己停了（好像不止 Stop，还 Unload 了），再启动还能用。
 					就是说，传给这个差速控制器的参数（param 里的 controller 的五项）里面包含轮子的节点（？）名，
 					之前以为是 controller_manager 订阅 cmd_vel，计算后发给仿真器发的轮子驱动话题，
@@ -117,7 +116,10 @@
 							https://github.com/ros-controls/ros_controllers
 							/opt/ros/noetic/lib/controller_manager（spawner 之类在这）
 						感觉相关：
-							https://zhuanlan.zhihu.com/p/406419561 第六节rrr
+							https://zhuanlan.zhihu.com/p/406419561 第六节
+				
+				
+				
 				* 一个粗糙的解决方法：
 					没有先装一下：sudo apt install ros-noetic-rqt-controller-manager
 					rosrun rqt_controller_manager rqt_controller_manager 启动可视化界面，仿真器 reset 后顺手把控制器也右键重开一下。
@@ -173,13 +175,6 @@
 	3、启动 repeat
 		带上路径，例如：
 		roslaunch teach_repeat dm_tb3.launch load_path:="/home/gralerfics/MyFiles/Workspace/tr_data/2023-12-07_22:28:59"
-
-
-
-
-
-
-
 
 
 

@@ -1,0 +1,17 @@
+[]
+
+
+
+[dc_tb3.launch]
+	data_collect.py
+		[Service] ready_data_collect (Trigger) -> on_ready
+		[ServiceProxy] save_image_pose (SaveImageAndPose)
+	data_save.py
+		
+
+
+
+[dm_tb3.launch]
+
+
+
