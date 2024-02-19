@@ -1,0 +1,134 @@
+（Pi 上）bringup
+roslaunch turtlebot3_bringup turtlebot3_robot.launch
+
+键盘
+roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+
+建图
+# Gmapping, Cartographer[*], Hector, Karto, Frontier_exploration, RTAB-Map
+roslaunch turtlebot3_slam turtlebot3_slam.launch slam_methods:=gmapping
+roslaunch turtlebot3_slam turtlebot3_slam.launch slam_methods:=cartographer
+
+存图
+rosrun map_server map_saver -f ~/map
+
+导航读图
+roslaunch turtlebot3_navigation turtlebot3_navigation.launch map_file:=$HOME/.map/map.yaml
+
+修改了 launch 允许指定 .rviz 文件后的启动
+roslaunch turtlebot3_navigation turtlebot3_navigation.launch map_file:=$HOME/.map/map.yaml rviz_file:=$HOME/MyFiles/Workspace/ee346_ws/src/lab7/rviz/visit.rviz
+
+-----
+
+运行
+. devel/setup.sh && rosrun lab7 visit.py
+
+-----
+
+仿真
+roslaunch turtlebot3_gazebo turtlebot3_world.launch
+
+-----
+
+[P3]
+pose: 
+  pose: 
+    position: 
+      x: -1.1049005393302707
+      y: -1.7124668049043297
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.14720263016779364
+      w: 0.9891063571081139
+
+[P2]
+pose: 北面过来一点歪
+  pose: 
+    position: 
+      x: -0.7734617587200389
+      y: 2.146029699978358
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.880097923910255
+      w: 0.47479221173989267
+pose: 图对
+  pose: 
+    position: 
+      x: -0.8659202038331747
+      y: 2.264093551514219
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.26008862664053645
+      w: 0.9655847483738751
+
+[P2-1,out]
+pose: 
+  pose: 
+    position: 
+      x: 1.3058982355526936
+      y: 1.3136307594119567
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.050005450115442794
+      w: 0.9987489449099568
+
+[P34-12]
+pose: 
+  pose: 
+    position: 
+      x: 0.8941441783576553
+      y: -0.9154355192352538
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.7275594378807311
+      w: 0.6860446518636194
+
+[P4]
+pose: 图准
+  pose: 
+    position: 
+      x: 2.899912171347615
+      y: -1.9676318836143958
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.025581054239757296
+      w: 0.999672751286131
+
+[P2-1,in]
+pose: 
+  pose: 
+    position: 
+      x: 1.892370461567939
+      y: 1.2399054878040552
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.004793442351425487
+      w: 0.9999885113892177
+
+[P1]
+pose: ？？？
+  pose: 
+    position: 
+      x: 3.166435534256725
+      y: 1.941716333329415
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.8846327986411303
+      w: 0.4662883352265649
+

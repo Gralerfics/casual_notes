@@ -147,15 +147,6 @@
 [启动 data matching]
 	[建立 dm_tb3.launch]
 		同前修改一堆 param
-	[TODO]
-		一开始过了，但后来不知道改了什么跑不对了，回滚了 .wbt 文件就又好了；
-		忘记留出错的文件没法复现，中间出现了估计在左侧但疯狂右转的行为；
-		……
-		又感觉没改什么，跑飞了，这次文件留下了；
-		……
-		再回滚跑一次也飞了，也就是说，同样的文件跑两次不一样了，再来一次又正常了；
-		——
-		又飞了，我非得看看难不成哪里有时间或者随机数吗？
 
 
 
@@ -169,6 +160,8 @@
 	2、启动 teach
 		roslaunch teach_repeat dc_tb3.launch
 		roslaunch teach_repeat dc_tb3.launch teleop_keyboard:=false
+		手动启动键盘控制：
+			rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/tb3/controller/cmd_vel
 	3.0、启动 gmapping
 		roslaunch teach_repeat tb3_gmapping.launch
 		给出一个 /map 方便查看，包括目标点也会发布到相对 /map 参考系下
