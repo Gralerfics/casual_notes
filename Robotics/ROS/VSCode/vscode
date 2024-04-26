@@ -6,7 +6,27 @@
 			本质上是在 .vscode 里加了 settings.json 等，往参数 "python.autoComplete.extraPaths" 和 "python.analysis.extraPaths" 里
 			加了 devel/lib/python3/dist-packages 和 /opt/ros/noetic/lib/python3/dist-packages
 
-
-
-
-
+更新：关于使用 clangd 作为代码提示工具的情况
+	装插件 ROS
+	clang 与插件的安装与配置略
+	使用 catkin_make -DCMAKE_EXPORT_COMPILE_COMMANDS=1 以在 catkin_make 时生成 compile_commands.json 文件
+	工作空间要开在 xxx_ws 根目录下，否则貌似找不到 compile_commands.json
+	方便起见可以编写 .vscode/task.json（Ctrl + Shift + B 后点击选项 catkin_make: build 后的齿轮）:
+		{
+			"version": "2.0.0",
+			"tasks": [
+				{
+					"type": "catkin_make",
+					"args": [
+						"--directory",
+						"/home/gralerfics/MyFiles/Workspace/pf_ws",
+						"-DCMAKE_EXPORT_COMPILE_COMMANDS=1" # 注意这一条，以及删除原本自动的某一条关于构建模式的参数
+					],
+					"problemMatcher": [
+						"$catkin-gcc"
+					],
+					"group": "build",
+					"label": "catkin_make: build"
+				}
+			]
+		}
